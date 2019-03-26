@@ -1,0 +1,42 @@
+@startuml
+actor CommandScript
+CommandScript -> M360Bing : getReport(Report, startDate, endDate)
+M360Bing -> M360Bing : SetReportFilePath
+M360Bing -> M360BingGenerateReport : new M360BingGenerateReport($this->proxy, $m360ReportType, $startDate, $endDate)
+M360BingGenerateReport -> M360BingGenerateReport : createReportRequest()
+M360BingGenerateReport->Report : getReportObject()
+return reportInstance
+M360BingGenerateReport->Report : getReportAggregation()
+M360BingGenerateReport->Report : getReportScopeObject
+M360BingGenerateReport->Proxy : getAccountId()
+return m360BingGenerateReportInstance
+M360Bing -> M360BingGenerateReport : submitRequest()
+M360BingGenerateReport->Proxy : SubmitGenerateReport()
+return reportRequestID
+M360Bing->M360BingGenerateReport : pollBingForCompleteRequest
+loop attempt < 150
+    M360BingGenerateReport->M360BingGenerateReport : singleBingPoll()
+    M360BingGenerateReport->Proxy : PollGenerateRequest
+    Proxy->M360BingGenerateReport : reportRequestStatus
+    alt "reportRequestStatus == (Success or Error)"
+        M360BingGenerateReport->M360Bing : reportRequestStatus
+    end
+end
+alt reportStatus is Success
+    M360Bing->ReportHelpers : ::downloadReport(reportStatus,reportFilePath)
+    return reportDownloadedSuccessfully
+    M360Bing->ReportHelpers : ::unzipReport(reportFilePath)
+    return unzipPath
+  alt fileUnzippedSuccessfully
+      M360Bing->ReportHelpers : ::ParseCSV(filehandle)
+      return parsedData
+      M360Bing->ReportHelpers : ::updateHeadersForDbInsert(parsedData)
+      return parsedData
+      M360Bing --> CommandScript : parsedData
+  end
+else if report status error or report times out 
+
+  M360Bing-->CommandScript : false
+end
+
+@enduml
