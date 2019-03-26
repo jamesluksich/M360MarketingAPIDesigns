@@ -1,0 +1,5 @@
+@startuml
+JobRunner  *-- Job
+JobRunner  *-- ApiManager
+ApiManager *-- Client
+@enduml
